@@ -1,4 +1,37 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { postConfirmation } from "../auth/post-confirmation/resource";
+
+// ✅ Combine both models into a single schema
+const schema = a.schema({
+  UserProfile: a
+    .model({
+      email: a.string(),
+      profileOwner: a.string(),
+    })
+    .authorization((allow) => [allow.ownerDefinedIn("profileOwner")]),
+
+  Todo: a
+    .model({
+      content: a.string(),
+      isDone: a.boolean(), // ✅ Added "isDone" field
+    })
+    .authorization((allow) => [allow.guest()]),
+}).authorization((allow) => [allow.resource(postConfirmation)]);
+
+// ✅ Define a single Schema type
+export type Schema = ClientSchema<typeof schema>;
+
+// ✅ Keep only ONE defineData call
+export const data = defineData({
+  schema,
+  authorizationModes: {
+    defaultAuthorizationMode: "apiKey", // ✅ Using API Key for now
+    apiKeyAuthorizationMode: {
+      expiresInDays: 30,
+    },
+  },
+});
+
 
 /*== STEP 1 ===============================================================
 The section below creates a Todo database table with a "content" field. Try
@@ -6,22 +39,6 @@ adding a new "isDone" field as a boolean. The authorization rule below
 specifies that any unauthenticated user can "create", "read", "update", 
 and "delete" any "Todo" records.
 =========================================================================*/
-const schema = a.schema({
-  Todo: a
-    .model({
-      content: a.string(),
-    })
-    .authorization((allow) => [allow.guest()]),
-});
-
-export type Schema = ClientSchema<typeof schema>;
-
-export const data = defineData({
-  schema,
-  authorizationModes: {
-    defaultAuthorizationMode: 'iam',
-  },
-});
 
 /*== STEP 2 ===============================================================
 Go to your frontend source code. From your client-side code, generate a
@@ -51,3 +68,5 @@ Fetch records from the database and use them in your frontend component.
 // const { data: todos } = await client.models.Todo.list()
 
 // return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>
+
+
